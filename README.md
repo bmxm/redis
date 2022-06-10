@@ -1,3 +1,39 @@
+- deps 目录
+
+这个目录主要包含了 Redis 依赖的第三方代码库，包括 Redis 的 C 语言版本客户端代码 hiredis、jemalloc 内存分配器代码、readline 功能的替代代码 linenoise，以及 lua 脚本代码。
+
+
+- src 目录
+
+这个目录里面包含了 Redis 所有功能模块的代码文件，也是 Redis 源码的重要组成部分。
+对于某个功能一般包含了实现该功能的 C 语言文件(.c文件)和对应的头文件（.h文件）。
+比如，dict.c 和 dict.h 就是用于实现哈希表的 C 文件和头文件。
+
+
+- tests 目录
+
+在软件产品的开发过程中，除了第三方依赖库和功能模块源码以外，我们通常还需要在系统源码中，添加用于功能模块测试和单元测试的代码。而在 Redis 的代码目录中，就将这部分代码用一个 tests 目录统一管理了起来。
+
+
+- utils 目录
+
+在 Redis 开发过程中，还有一些功能属于辅助性功能，包括用于创建 Redis Cluster 的脚本、用于测试 LRU 算法效果的程序，以及可视化 rehash 过程的程序。在 Redis 代码结构中，这些功能代码都被归类到了 utils 目录中统一管理。
+
+
+Redis 数据库提供了丰富的键值对类型，其中包括了 String、List、Hash、Set 和 Sorted Set 这五种基本键值类型。
+此外，Redis 还支持位图、HyperLogLog、Geo 等扩展数据类型。而为了支持这些数据类型，Redis 就使用了多种数据结构来作为这些类型的底层结构。
+比如，String 类型的底层数据结构是 SDS，而 Hash 类型的底层数据结构包括哈希表和压缩列表。不过，因为 Redis 实现的底层数据结构非常多，
+所以这里我把这些底层结构和它们对应的键值对类型，以及相应的代码文件列在了下表中。
+底层数据结构 --> 对应数据类型 --> 对应源码文件
+    SDS          String     sds.h/sds.c/sdsalloc.h
+
+
+除了实现了诸多的数据类型以外，Redis 作为数据库，还实现了对键值对的新增、查询、修改和删除等操作接口，这部分功能是在 db.c 文件实现的。
+
+
+
+
+
 This README is just a fast *quick start* document. You can find more detailed documentation at [redis.io](https://redis.io).
 
 What is Redis?

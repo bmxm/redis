@@ -6205,6 +6205,19 @@ redisTestProc *getTestProcByName(const char *name) {
 }
 #endif
 
+// Redis 在运行时是一个网络服务器实例，因此相应地就需要有代码实现服务器实例的初始化和主体控制流程，
+// 而这是由 server.h/server.c 实现的，Redis 整个代码的 main 入口函数也是在 server.c 中。
+// 如果你想了解 Redis 是如何开始运行的，那么就可以从 server.c 的 main 函数开始看起。
+//
+// 当然，对于一个网络服务器来说，它还需要提供网络通信功能。Redis 使用了基于事件驱动机制的网络通信框架，
+// 涉及的代码文件包括 ae.h/ae.c，ae_epoll.c，ae_evport.c，ae_kqueue.c，ae_select.c。
+//
+// 而除了事件驱动网络框架以外，与网络通信相关的功能还包括底层 TCP 网络通信和客户端实现。
+// Redis 对 TCP 网络通信的 Socket 连接、设置等操作进行了封装，这些封装后的函数实现在 anet.h/anet.c 中。
+// 这些函数在 Redis Cluster 创建和主从复制的过程中，会被调用并用于建立 TCP 连接。
+// 除此之外，客户端在 Redis 的运行过程中也会被广泛使用，比如实例返回读取的数据、主从复制时在主从库间传输数据、
+// Redis Cluster 的切片实例通信等，都会用到客户端。Redis 将客户端的创建、消息回复等功能，
+// 实现在了 networking.c 文件中，如果你想了解客户端的设计与实现，可以重点看下这个代码文件。
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
