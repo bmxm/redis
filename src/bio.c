@@ -58,6 +58,27 @@
  */
 
 
+/*
+
+ Redis Server 在启动时，会在 server.c 中调用 bioInit 函数，这个函数会创建 3 类后台任务（类型定义在 bio.h 中）：
+
+#define BIO_CLOSE_FILE    0 // 后台线程关闭 fd
+#define BIO_AOF_FSYNC     1 // AOF 配置为 everysec，后台线程刷盘
+#define BIO_LAZY_FREE     2 // 后台线程释放 key 内存
+
+这 3 类后台任务，已经注册好了执行固定的函数（消费者）：
+
+- BIO_CLOSE_FILE 对应执行 close(fd)
+- BIO_AOF_FSYNC 对应执行 fsync(fd)
+- BIO_LAZY_FREE 根据参数不同，对应 3 个函数（freeObject/freeDatabase/freeSlowsMap）
+
+之后，主线程凡是需要把一个任务交给后台线程处理时，就会调用 bio.c 的 bioCreateBackgroundJob 函数（相当于发布异步任务的函数），并指定该任务是上面 3 个的哪一类，把任务挂到对应类型的「链表」下（bio_jobs[type]），任务即发布成功（生产者任务完成）。
+
+消费者从链表中拿到生产者发过来的「任务类型 + 参数」，执行上面任务对应的方法即可。当然，由于是「多线程」读写链表数据，这个过程是需要「加锁」操作的。
+
+如果要找「异步删除数据」的逻辑，可以从 server.c 的 unlink 命令为起点，一路跟代码进去，就会看到调用了 lazyfree.c 的 dbAsyncDelete 函数，这个函数最终会调到上面提到的发布异步任务函数 bioCreateBackgroundJob，整个链条就串起来了。
+ */
+
 #include "server.h"
 #include "bio.h"
 

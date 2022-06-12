@@ -41,6 +41,33 @@
 
 const char *SDS_NOINIT = "SDS_NOINIT";
 
+// 因为 Redis 是使用 C 语言开发的，所以为了保证能尽量复用 C 标准库中的字符串操作函数，
+// Redis 保留了使用字符数组来保存实际的数据。但是，和 C 语言仅用字符数组不同，Redis
+// 还专门设计了 SDS（即简单动态字符串）的数据结构，在字符数组的基础上增加了字符数组长度
+// 和分配空间大小等元数据。这样一来，需要基于字符串长度进行的追加、复制、比较等操作，
+// 就可以直接取元数据，效率也就提升了。而且，SDS 不通过字符串中的"\0"字符判断字符串结束，
+// 而是直接将其作为二进制数据处理，可以用来保存图片等二进制数据。
+//
+// 1. Redis 中所有的 key 的类型都是 SDS (db.c 的 dbAdd 函数), value 不一定是字符串。
+// 2. Redis Server 在读取 Client 发来的请求时，会先读到一个缓冲区中，这个缓冲区也是 SDS
+// (server.h 中 struct client 的 querybuf 字段)。
+// 3. 写操作追加到 AOF 时，也会先写到 AOF 缓冲区，这个缓冲区也是SDS (server.h 中
+// struct client 的 aof_buf 字段)。
+//
+// 对字符串的要求
+// 1. 能支持丰富且高效的字符串操作，比如字符串追加、拷贝、比较、获取长度等；
+// 2. 能保存任意的二进制数据，比如图片；
+// 3. 能尽可能地节省内存开销。
+//
+// C 语言字符串的问题
+// 1. \0 问题：如 strlen 函数就是遍历 char* 数组，遇到 \0 则返回，这样就不能保存任意
+// 二进制数据了,而且该函数的时间复杂度是 O(N)。
+// 2. 另一个比如，strcat 追加函数，也需要先进行遍历两个字符串，并且目标字符串没有足够的
+// 可用空间就无法追加，需要开发人员动态分配空间，增加编程的复杂度。
+//
+// 紧凑型字符串结构的编程技巧
+// SDS 结构中有一个元数据 flags, 表示
+
 static inline int sdsHdrSize(char type) {
     switch(type&SDS_TYPE_MASK) {
         case SDS_TYPE_5:
@@ -101,7 +128,9 @@ static inline size_t sdsTypeMaxSize(char type) {
  * end of the string. However the string is binary safe and can contain
  * \0 characters in the middle, as the length is stored in the sds header. */
 sds _sdsnewlen(const void *init, size_t initlen, int trymalloc) {
+    // 指向 SDS 结构体的指针
     void *sh;
+    // sds 类型变量，即 char* 字符数组
     sds s;
     char type = sdsReqType(initlen);
     /* Empty strings are usually created in order to append. Use type 8
@@ -430,12 +459,25 @@ sds sdsgrowzero(sds s, size_t len) {
  * After the call, the passed sds string is no longer valid and all the
  * references must be substituted with the new pointer returned by the call. */
 sds sdscatlen(sds s, const void *t, size_t len) {
+    // s 目标字符串
+    // t 源字符串
+    // len 要追加的长度
+
+
+    // 获取目标字符串 s 的当前长度
     size_t curlen = sdslen(s);
 
+    // 根据要追加的长度 len 和目标字符串 s 的现有长度，判断是否要增加新的空间
     s = sdsMakeRoomFor(s,len);
     if (s == NULL) return NULL;
+
+    // 将源字符串 t 中 len 长度的数据拷贝到目标字符串结尾
     memcpy(s+curlen, t, len);
+
+    // 设置目标字符串的最新长度：拷贝前长度 curlen 加上拷贝长度
     sdssetlen(s, curlen+len);
+
+    // 拷贝后在目标字符串结尾加上 \0
     s[curlen+len] = '\0';
     return s;
 }

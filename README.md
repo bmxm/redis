@@ -24,8 +24,46 @@ Redis 数据库提供了丰富的键值对类型，其中包括了 String、List
 此外，Redis 还支持位图、HyperLogLog、Geo 等扩展数据类型。而为了支持这些数据类型，Redis 就使用了多种数据结构来作为这些类型的底层结构。
 比如，String 类型的底层数据结构是 SDS，而 Hash 类型的底层数据结构包括哈希表和压缩列表。不过，因为 Redis 实现的底层数据结构非常多，
 所以这里我把这些底层结构和它们对应的键值对类型，以及相应的代码文件列在了下表中。
+
 底层数据结构 --> 对应数据类型 --> 对应源码文件
+
     SDS          String     sds.h/sds.c/sdsalloc.h
+
+数据类型：
+- String（t_string.c、sds.c、bitops.c）
+- List（t_list.c、ziplist.c）
+- Hash（t_hash.c、ziplist.c、dict.c）
+- Set（t_set.c、intset.c）
+- Sorted Set（t_zset.c、ziplist.c、dict.c）
+- HyperLogLog（hyperloglog.c）
+- Geo（geo.c、geohash.c、geohash_helper.c）
+- Stream（t_stream.c、rax.c、listpack.c）
+
+全局：
+- Server（server.c、anet.c）
+- Object（object.c）
+- 键值对（db.c）
+- 事件驱动（ae.c、ae_epoll.c、ae_kqueue.c、ae_evport.c、ae_select.c、networking.c）
+- 内存回收（expire.c、lazyfree.c）
+- 数据替换（evict.c）
+- 后台线程（bio.c）
+- 事务（multi.c）
+- PubSub（pubsub.c）
+- 内存分配（zmalloc.c）
+- 双向链表（adlist.c）
+
+高可用&集群：
+- 持久化：RDB（rdb.c、redis-check-rdb.c)、AOF（aof.c、redis-check-aof.c）
+- 主从复制（replication.c）
+- 哨兵（sentinel.c）
+- 集群（cluster.c）
+
+辅助功能：
+- 延迟统计（latency.c）
+- 慢日志（slowlog.c）
+- 通知（notify.c）
+- 基准性能（redis-benchmark.c）
+
 
 
 除了实现了诸多的数据类型以外，Redis 作为数据库，还实现了对键值对的新增、查询、修改和删除等操作接口，这部分功能是在 db.c 文件实现的。
